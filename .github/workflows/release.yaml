@@ -1,11 +1,12 @@
 name: Build and Release CHDMAN-GUI
 
-# This action triggers whenever you push a tag that starts with "v" (e.g., v1.0.0)
+# This workflow triggers automatically when you push a tag like v1.0.0
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*' 
 
+# Required to allow the Action to upload files to your Releases page
 permissions:
   contents: write
 
@@ -21,20 +22,20 @@ jobs:
             arch: x86_64
             artifact_name: CHDMAN-GUI.exe
             asset_name: CHDMAN-GUI-Windows-x86_64.exe
-
-          # Linux x86-64 (PyInstaller Standalone Binary)
+          
+          # Linux x86-64 (Standalone Executable)
           - os: ubuntu-latest
             arch: x86_64
             artifact_name: CHDMAN-GUI
             asset_name: CHDMAN-GUI-Linux-x86_64
-
-          # macOS Intel (x86-64)
-          - os: macos-13
+          
+          # macOS Intel (x86-64) - Updated to the new macos-15-intel runner
+          - os: macos-15-intel
             arch: x86_64
             artifact_name: CHDMAN-GUI.app
             asset_name: CHDMAN-GUI-macOS-Intel.zip
-
-          # macOS Apple Silicon (ARM64)
+          
+          # macOS Apple Silicon (ARM64 / M1, M2, M3)
           - os: macos-14
             arch: arm64
             artifact_name: CHDMAN-GUI.app
@@ -54,30 +55,34 @@ jobs:
           python -m pip install --upgrade pip
           pip install PyQt6 pyinstaller
 
+      # BUILD STEP: WINDOWS & LINUX
       - name: Build with PyInstaller (Windows/Linux)
         if: runner.os != 'macOS'
-        run: pyinstaller --noconsole --onefile --name CHDMAN-GUI chman_gui.py
+        run: pyinstaller --noconsole --onefile --name CHDMAN-GUI chdman_gui.py
 
+      # BUILD STEP: MACOS (.app bundle)
       - name: Build with PyInstaller (macOS)
         if: runner.os == 'macOS'
-        run: pyinstaller --noconsole --windowed --name CHDMAN-GUI chman_gui.py
+        run: pyinstaller --noconsole --windowed --name CHDMAN-GUI chdman_gui.py
 
+      # PACKAGING: MACOS (Zips the .app folder)
       - name: Zip macOS App Bundle
         if: runner.os == 'macOS'
         run: |
           cd dist
           zip -r ../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
 
+      # PACKAGING: WINDOWS & LINUX (Renames and sets executable permissions)
       - name: Rename Windows/Linux Assets
         if: runner.os != 'macOS'
         shell: bash
         run: |
           mv dist/${{ matrix.artifact_name }} ./${{ matrix.asset_name }}
-          # Make Linux binary executable
           if [ "${{ runner.os }}" == "Linux" ]; then
             chmod +x ./${{ matrix.asset_name }}
           fi
 
+      # UPLOAD: Attach files to the GitHub Release
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
