@@ -4,6 +4,8 @@ A cross-platform, multi-threaded GUI wrapper for MAME's `chdman` tool.
 
 Batch-convert your CD and DVD dumps (`.cue`, `.iso`, `.gdi`, `.toc`) to the compressed `.chd` format, or extract them back to their original formats with a single click.
 
+Vibe coded with Gemini.
+
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 ![Platform: Windows | macOS | Linux](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
@@ -14,7 +16,7 @@ Batch-convert your CD and DVD dumps (`.cue`, `.iso`, `.gdi`, `.toc`) to the comp
 
 ## Screenshot
 
-![Screenshot of CHDMAN-GUI](screenshot.png)
+![CHDMAN-GUI screenshot](screenshot.png)
 
 ## Installation & Requirements
 
@@ -35,7 +37,7 @@ Go to the **[Releases](../../releases/latest)** page and download the compiled b
 * `CHDMAN-GUI-macOS-AppleSilicon.zip` (M1/M2/M3 Macs)
 * `CHDMAN-GUI-macOS-Intel.zip` (Older Intel Macs)
 
-No installation required—just extract and run!
+No installation required, just extract and run.
 
 ## Usage
 
