@@ -1,12 +1,10 @@
 name: Build and Release CHDMAN-GUI
 
-# This workflow triggers automatically when you push a tag like v1.0.0
 on:
   push:
     tags:
       - 'v*' 
 
-# Required to allow the Action to upload files to your Releases page
 permissions:
   contents: write
 
@@ -17,29 +15,29 @@ jobs:
     strategy:
       matrix:
         include:
-          # Windows x86-64
+          # Windows
           - os: windows-latest
             arch: x86_64
             artifact_name: CHDMAN-GUI.exe
-            asset_name: CHDMAN-GUI-Windows-x86_64.exe
+            archive_name: CHDMAN-GUI-Windows-x86_64.zip
           
-          # Linux x86-64 (Standalone Executable)
+          # Linux
           - os: ubuntu-latest
             arch: x86_64
             artifact_name: CHDMAN-GUI
-            asset_name: CHDMAN-GUI-Linux-x86_64
+            archive_name: CHDMAN-GUI-Linux-x86_64.tar.gz
           
-          # macOS Intel (x86-64) - Updated to the new macos-15-intel runner
+          # macOS Intel
           - os: macos-15-intel
             arch: x86_64
             artifact_name: CHDMAN-GUI.app
-            asset_name: CHDMAN-GUI-macOS-Intel.zip
+            archive_name: CHDMAN-GUI-macOS-Intel.zip
           
-          # macOS Apple Silicon (ARM64 / M1, M2, M3)
+          # macOS Apple Silicon
           - os: macos-14
             arch: arm64
             artifact_name: CHDMAN-GUI.app
-            asset_name: CHDMAN-GUI-macOS-AppleSilicon.zip
+            archive_name: CHDMAN-GUI-macOS-AppleSilicon.zip
 
     steps:
       - name: Checkout Code
@@ -55,38 +53,85 @@ jobs:
           python -m pip install --upgrade pip
           pip install PyQt6 pyinstaller
 
-      # BUILD STEP: WINDOWS & LINUX
+      # EXCLUSIONS LIST: Strips out massive unused Qt modules (Web browsers, SQL, 3D engines, etc.)
       - name: Build with PyInstaller (Windows/Linux)
         if: runner.os != 'macOS'
-        run: pyinstaller --noconsole --onefile --name CHDMAN-GUI chdman_gui.py
+        run: >
+          pyinstaller --noconsole --onefile --name CHDMAN-GUI
+          --exclude-module PyQt6.QtWebEngine 
+          --exclude-module PyQt6.QtWebEngineCore 
+          --exclude-module PyQt6.QtWebEngineWidgets 
+          --exclude-module PyQt6.QtNetwork 
+          --exclude-module PyQt6.QtQml 
+          --exclude-module PyQt6.QtQuick 
+          --exclude-module PyQt6.QtSql 
+          --exclude-module PyQt6.QtTest 
+          --exclude-module PyQt6.QtXml 
+          --exclude-module PyQt6.QtBluetooth 
+          --exclude-module PyQt6.QtMultimedia 
+          --exclude-module PyQt6.QtMultimediaWidgets 
+          --exclude-module PyQt6.QtOpenGL 
+          --exclude-module PyQt6.QtOpenGLWidgets 
+          --exclude-module PyQt6.QtPositioning 
+          --exclude-module PyQt6.QtPrintSupport 
+          --exclude-module PyQt6.QtSensors 
+          --exclude-module PyQt6.QtSerialPort 
+          --exclude-module PyQt6.QtSvg 
+          --exclude-module PyQt6.QtWebChannel 
+          --exclude-module PyQt6.QtWebSockets 
+          chdman_gui.py
 
-      # BUILD STEP: MACOS (.app bundle)
       - name: Build with PyInstaller (macOS)
         if: runner.os == 'macOS'
-        run: pyinstaller --noconsole --windowed --name CHDMAN-GUI chdman_gui.py
+        run: >
+          pyinstaller --noconsole --windowed --name CHDMAN-GUI
+          --exclude-module PyQt6.QtWebEngine 
+          --exclude-module PyQt6.QtWebEngineCore 
+          --exclude-module PyQt6.QtWebEngineWidgets 
+          --exclude-module PyQt6.QtNetwork 
+          --exclude-module PyQt6.QtQml 
+          --exclude-module PyQt6.QtQuick 
+          --exclude-module PyQt6.QtSql 
+          --exclude-module PyQt6.QtTest 
+          --exclude-module PyQt6.QtXml 
+          --exclude-module PyQt6.QtBluetooth 
+          --exclude-module PyQt6.QtMultimedia 
+          --exclude-module PyQt6.QtMultimediaWidgets 
+          --exclude-module PyQt6.QtOpenGL 
+          --exclude-module PyQt6.QtOpenGLWidgets 
+          --exclude-module PyQt6.QtPositioning 
+          --exclude-module PyQt6.QtPrintSupport 
+          --exclude-module PyQt6.QtSensors 
+          --exclude-module PyQt6.QtSerialPort 
+          --exclude-module PyQt6.QtSvg 
+          --exclude-module PyQt6.QtWebChannel 
+          --exclude-module PyQt6.QtWebSockets 
+          chdman_gui.py
 
-      # PACKAGING: MACOS (Zips the .app folder)
-      - name: Zip macOS App Bundle
+      # PACKAGING: Windows (Zips the clean .exe)
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path dist\${{ matrix.artifact_name }} -DestinationPath ${{ matrix.archive_name }}
+
+      # PACKAGING: Linux (Tars the clean binary)
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x dist/${{ matrix.artifact_name }}
+          tar -czvf ${{ matrix.archive_name }} -C dist ${{ matrix.artifact_name }}
+
+      # PACKAGING: macOS (Zips the .app folder)
+      - name: Package macOS
         if: runner.os == 'macOS'
         run: |
           cd dist
-          zip -r ../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+          zip -r ../${{ matrix.archive_name }} ${{ matrix.artifact_name }}
 
-      # PACKAGING: WINDOWS & LINUX (Renames and sets executable permissions)
-      - name: Rename Windows/Linux Assets
-        if: runner.os != 'macOS'
-        shell: bash
-        run: |
-          mv dist/${{ matrix.artifact_name }} ./${{ matrix.asset_name }}
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            chmod +x ./${{ matrix.asset_name }}
-          fi
-
-      # UPLOAD: Attach files to the GitHub Release
+      # UPLOAD
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ matrix.asset_name }}
+            ${{ matrix.archive_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
